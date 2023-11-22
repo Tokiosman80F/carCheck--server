@@ -1,16 +1,19 @@
-const express = require("express");
-const app = express();
-const port = process.env.port || 3000;
+const express=require('express')
+const cors=require('cors')
+const { MongoClient, ServerApiVersion } = require('mongodb');
+const app= express()
+const port=process.env.PORT || 5000
 
-app.get("/", (req, res) => {
-  res.send("Hello Car Check !");
-});
+// middleware
+app.use(cors())
+app.use(express.json())
 
-require("dotenv").config();
-console.log(process.env.BUCKET);
+require('dotenv').config()
+console.log()
+console.log(process.env.BUCKET_KEY)
 
-const { MongoClient, ServerApiVersion } = require("mongodb");
-const uri = `mongodb+srv://${process.env.BUCKET}:${process.env.BUCKET_kEY}@cluster0.lyiobzh.mongodb.net/?retryWrites=true&w=majority`;
+
+const uri = `mongodb+srv://${process.env.BUCKET}:${process.env.BUCKET_KEY}@cluster0.lyiobzh.mongodb.net/?retryWrites=true&w=majority`;
 
 // Create a MongoClient with a MongoClientOptions object to set the Stable API version
 const client = new MongoClient(uri, {
@@ -18,31 +21,29 @@ const client = new MongoClient(uri, {
     version: ServerApiVersion.v1,
     strict: true,
     deprecationErrors: true,
-  },
+  }
 });
 
 async function run() {
   try {
     // Connect the client to the server	(optional starting in v4.7)
     await client.connect();
-    const services = client.db("carCheck").collection("services");
-
-    app.get("/services",async (req,res)=>{
-        const result= await services.find().toArray()
-        res.send(result)
-    })
     // Send a ping to confirm a successful connection
     await client.db("admin").command({ ping: 1 });
-    console.log(
-      "Pinged your deployment. You successfully connected to MongoDB!"
-    );
+    console.log("Pinged your deployment. You successfully connected to MongoDB!");
   } finally {
     // Ensures that the client will close when you finish/error
-    // await client.close();
+    await client.close();
   }
 }
-run().catch(console.log);
+run().catch(console.dir);
 
-app.listen(port, () => {
-  console.log(`Example app listening on port ${port}`);
-});
+
+
+
+app.get('/',(req,res)=>{
+    res.send("hello carcheck ")
+})
+app.listen(port,()=>{
+    console.log(`example app listening on port ${port}`);
+})
