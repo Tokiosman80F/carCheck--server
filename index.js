@@ -43,12 +43,28 @@ async function run() {
       res.send(result);
     });
     // booking data
-    app.post("/booking",async (req,res)=>{
-        const booking=req.body
-        console.log("booking =>",booking);
-        const result=await bookingDatabase.insertOne(booking)
-        res.send(result)
-    })
+    app.post("/booking", async (req, res) => {
+      const booking = req.body;
+      console.log("booking =>", booking);
+      const result = await bookingDatabase.insertOne(booking);
+      res.send(result);
+    });
+    // getting booking data
+    app.get("/booking", async (req, res) => {
+      let query = {};
+      if (req.query?.email) {
+        query = { email: req.query.email };
+      }
+      const booking = await bookingDatabase.find(query).toArray();
+      res.send(booking);
+    });
+    // deleting booking data
+    app.delete("/booking/:id", async (req, res) => {
+      const id = req.params.id;
+      const filter = { _id: new ObjectId(id) };
+      const result = await bookingDatabase.deleteOne(filter);
+      res.send(result);
+    });
     // Send a ping to confirm a successful connection
     await client.db("admin").command({ ping: 1 });
 
