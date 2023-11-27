@@ -3,7 +3,7 @@ const cors = require("cors");
 const { MongoClient, ServerApiVersion, ObjectId } = require("mongodb");
 const app = express();
 const port = process.env.PORT || 5000;
-
+const jwt = require("jsonwebtoken");
 // middleware
 app.use(cors());
 app.use(express.json());
@@ -21,6 +21,25 @@ const client = new MongoClient(uri, {
   },
 });
 
+const verifyJwt = (req, res, next) => {
+  // console.log("hitting verityToken");
+  console.log(req.headers.authorization);
+  const authorization = req.headers.authorization;
+  // console.log("hitting bearer => ", authorization);
+  if (!authorization) {
+    return res.status(401).send({ error: true, message: "unathorize User" });
+  }
+  const token = authorization.split(" ")[1];
+  // console.log("verified token => ",token);
+  jwt.verify(token, process.env.ACCESS_KEY, (err, decoded) => {
+    if (err) {
+      return res.status(403).send({ error: true, message: "unauthorize User" });
+    }
+    req.decoded = decoded;
+    next();
+  });
+};
+
 async function run() {
   try {
     // Connect the client to the server	(optional starting in v4.7)
@@ -29,7 +48,15 @@ async function run() {
     const serviceDatabase = client.db("carCheckDb").collection("services");
     const bookingDatabase = client.db("carCheckDb").collection("bookings");
 
-    // getting data
+    // jwt route ---
+    app.post("/jwt", (req, res) => {
+      const user = req.body;
+      console.log("the user", user);
+      const token = jwt.sign(user, process.env.ACCESS_KEY, { expiresIn: "1h" });
+      // console.log("the token =>", token);
+      res.send({ token });
+    });
+    //  service route--- getting data
     app.get("/services", async (req, res) => {
       const result = await serviceDatabase.find().toArray();
       res.send(result);
@@ -42,7 +69,7 @@ async function run() {
       const result = await serviceDatabase.findOne(filter, options);
       res.send(result);
     });
-    // booking data
+    // booking route--- booking data
     app.post("/booking", async (req, res) => {
       const booking = req.body;
       console.log("booking =>", booking);
@@ -50,8 +77,15 @@ async function run() {
       res.send(result);
     });
     // getting booking data
-    app.get("/booking", async (req, res) => {
+    app.get("/booking", verifyJwt, async (req, res) => {
       let query = {};
+      const decoded = req.decoded;
+      if (decoded.email !== req.query.email) {
+        return res
+          .status(403)
+          .send({ error: true, message: "forbidden access" });
+      }
+      console.log("decoded: ", decoded);
       if (req.query?.email) {
         query = { email: req.query.email };
       }
