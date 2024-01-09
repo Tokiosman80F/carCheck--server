@@ -21,24 +21,22 @@ const client = new MongoClient(uri, {
   },
 });
 
-// const verifyJwt = (req, res, next) => {
-//   // console.log("hitting verityToken");
-//   console.log(req.headers.authorization);
-//   const authorization = req.headers.authorization;
-//   // console.log("hitting bearer => ", authorization);
-//   if (!authorization) {
-//     return res.status(401).send({ error: true, message: "unathorize User" });
-//   }
-//   const token = authorization.split(" ")[1];
-//   // console.log("verified token => ",token);
-//   jwt.verify(token, process.env.ACCESS_KEY, (err, decoded) => {
-//     if (err) {
-//       return res.status(403).send({ error: true, message: "unauthorize User" });
-//     }
-//     req.decoded = decoded;
-//     next();
-//   });
-// };
+const verifyJwt=(req,res,next)=>{
+  const authorization=req.headers.authorization
+  console.log(authorization);
+  if(!authorization){
+    return res.status(401).send({error:true,message:'before unAuthorize User'})
+  }
+  const token=authorization.split(" ")[1]
+  console.log("token =>",token);
+  jwt.verify(token,process.env.ACCESS_KEY,function(err,decoded){
+    if(err){
+      return res.status(401).send({error:true,message:'After unAuthorize User or token Expired'})
+    }
+    req.decoded=decoded
+    next()
+  })
+}
 
 async function run() {
   try {
@@ -48,10 +46,10 @@ async function run() {
     const serviceDatabase = client.db("carCheckDb").collection("services");
     const bookingDatabase = client.db("carCheckDb").collection("bookings");
 
-    // jwt route ---
+    // ----jwt route ---
     app.post('/jwt',(req,res)=>{
       const user=req.body
-      const token=jwt.sign(user,process.env.ACCESS_KEY,{expiresIn:60})
+      const token=jwt.sign(user,process.env.ACCESS_KEY,{expiresIn:'1h'})
       console.log("token",token);
       console.log("token object",{token});
       res.send({token})
@@ -77,21 +75,19 @@ async function run() {
       res.send(result);
     });
     // getting booking data
-    // app.get("/booking", verifyJwt, async (req, res) => {
-    //   let query = {};
-    //   const decoded = req.decoded;
-    //   if (decoded.email !== req.query.email) {
-    //     return res
-    //       .status(403)
-    //       .send({ error: true, message: "forbidden access" });
-    //   }
-    //   console.log("decoded: ", decoded);
-    //   if (req.query?.email) {
-    //     query = { email: req.query.email };
-    //   }
-    //   const booking = await bookingDatabase.find(query).toArray();
-    //   res.send(booking);
-    // });
+    app.get("/booking",verifyJwt , async (req, res) => {
+      const decoded=req.decoded
+      let query = {};
+      if(decoded.email!==req.query.email)
+      {
+        return res.status(403).send({error:true,message:"user not found"})
+      }
+      if (req.query?.email) {
+        query = { email: req.query.email };
+      }
+      const booking = await bookingDatabase.find(query).toArray();
+      res.send(booking);
+    });
     // deleting booking data
     app.delete("/booking/:id", async (req, res) => {
       const id = req.params.id;
